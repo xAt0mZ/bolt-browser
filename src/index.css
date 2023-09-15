@@ -1,0 +1,22 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Collapsible override */
+.Collapsible__contentInner {
+  @apply p-2.5;
+  @apply border-l border-gray-500;
+}
+
+.Collapsible__trigger {
+  @apply block relative pl-4 w-full;
+}
+
+.Collapsible__trigger::after {
+  @apply absolute -left-1 top-0 block content-['>'] rotate-90 transition-all;
+}
+
+.Collapsible__trigger.is-open:after {
+  @apply -rotate-90;
+}
+/* ! Collapsible override */
