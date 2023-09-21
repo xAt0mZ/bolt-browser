@@ -4,16 +4,16 @@
 
 /* Collapsible override */
 .Collapsible__contentInner {
-  @apply p-2.5;
+  @apply p-2;
   @apply border-l border-gray-500;
 }
 
 .Collapsible__trigger {
-  @apply block relative pl-4 w-full;
+  @apply block relative pl-3 w-full;
 }
 
 .Collapsible__trigger::after {
-  @apply absolute -left-1 top-0 block content-['>'] rotate-90 transition-all;
+  @apply absolute -left-0.5 top-0 block content-['>'] rotate-90 transition-all;
 }
 
 .Collapsible__trigger.is-open:after {

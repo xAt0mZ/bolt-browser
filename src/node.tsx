@@ -1,24 +1,35 @@
 import { compact } from 'lodash';
 import { Node } from 'reactflow';
 
-const keepList = [
-  'edge_stack',
-  'edge_update_schedule',
-  'edgegroups',
-  'endpoints',
-  'tags',
-];
+// const keepList = [
+//   'edge_stack',
+//   'edge_update_schedule',
+//   'edgegroups',
+//   'endpoints',
+//   'tags',
+// ];
 
-type DBItem = { Name: string };
+type DBItem = { Id?: string; EndpointId?: string };
 
-function buildNode<T>([bucketName, content]: [string, T]): Node[] | undefined {
-  if (!keepList.includes(bucketName)) {
+function buildNode<T>([bucketName, rawContent]: [string, T]): Node[] | undefined {
+  // if (!keepList.includes(bucketName)) {
+  //   return;
+  // }
+  console.log(bucketName, rawContent)
+
+  let content: Array<DBItem>;
+  if (Array.isArray(rawContent)) {
+    content = rawContent;
+  } else if (typeof rawContent === 'object') {
+    content = Object.values(rawContent as object)
+  } else {
+    console.error(bucketName, rawContent)
     return;
   }
 
-  return (content as Array<unknown>).map((ukItem) => {
-    const item = ukItem as DBItem;
-    const id = `${bucketName}-${item.Name}`;
+  return content.map((item) => {
+    const id = `${bucketName}-${item.Id || item.EndpointId}`;
+    bucketName === 'snapshots' && console.log(id)
     return {
       id,
       position: { x: 0, y: 0 },

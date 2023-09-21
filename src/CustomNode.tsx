@@ -12,25 +12,29 @@ type Props = {
 };
 
 export const CustomNode = memo<Props>(({ data: { data, bucket } }) => {
+  const { options } = useOptions();
+
+  if (!options[bucket].__internal__enabled) {
+    return null;
+  }
   return (
     <div
       className={clsx(
-        'flex flex-col border border-black rounded-lg bg-gray-200 p-2',
-        // data.Name.includes('update') ? 'border-dashed' : ''
+        'flex flex-col border border-black rounded-lg bg-gray-200 p-2'
       )}
     >
       <span>{bucket}</span>
-      <Collapse data={data} />
+      <Collapse data={data} bucket={bucket} />
     </div>
   );
 });
 
-function Collapse({ data }: { data: any }) {
+function Collapse({ data, bucket }: { data: any; bucket?: string }) {
   const { options } = useOptions();
   return (
     <>
       {Object.entries(data).map(([entry, value], key) => {
-        if (!options['edge_stack'][entry]) {
+        if (bucket && !options[bucket][entry]) {
           return null;
         }
         const isObject = typeof value === 'object';

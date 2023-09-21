@@ -1,9 +1,11 @@
 import { PropsWithChildren, createContext, useContext, useState } from 'react';
 
-export type Option = { [field: string]: boolean };
+export type Option = {
+  [field: string]: boolean;
+};
 
 export type Options = {
-  [name: string]: Option;
+  [bucket: string]: Option & { __internal__enabled: boolean };
 };
 
 type State = {

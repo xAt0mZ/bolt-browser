@@ -15,6 +15,7 @@ import { CustomNode } from './CustomNode';
 import Collapsible from 'react-collapsible';
 import { groupBy, uniq } from 'lodash';
 import { Option, Options, useOptions } from './useOptions';
+// import { forceSimulation } from 'd3-force';
 // import { buildEdges } from './edge';
 
 export function App() {
@@ -24,19 +25,22 @@ export function App() {
   // const [allEdges, setAllEdges] = useState<Edge[]>([]);
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   // const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-  const { setOptions } = useOptions();
+  const { options, setOptions } = useOptions();
 
   const compute = useCallback(() => {
     const nodes = buildNodes(rawDB);
     const options = Object.entries(groupBy(nodes, (n) => n.data.bucket)).reduce(
       (acc, [bucket, nodes]) => {
-        console.log(nodes);
-        acc[bucket] = uniq(
-          nodes.flatMap((node) => Object.keys(node.data.data))
-        ).reduce((acc, i) => {
-          acc[i] = false;
-          return acc;
-        }, {} as Option);
+        acc[bucket] = {
+          ...uniq(nodes.flatMap((node) => Object.keys(node.data.data))).reduce(
+            (acc, i) => {
+              acc[i] = false;
+              return acc;
+            },
+            {} as Option
+          ),
+          __internal__enabled: false,
+        };
         return acc;
       },
       {} as Options
@@ -48,7 +52,9 @@ export function App() {
   }, [rawDB, setOptions]);
 
   const render = useCallback(() => {
-    const filteredNodes = allNodes.filter((n) => n.id.includes(filter));
+    const filteredNodes = allNodes.filter(
+      (n) => n.id.includes(filter) && options[n.data.bucket].__internal__enabled
+    );
     // const nodeNames = filteredNodes.map((n) => n.id);
 
     // const filteredEdges = allEdges.filter(
@@ -61,7 +67,7 @@ export function App() {
     setNodes(filteredNodes);
 
     // setEdges(filteredEdges);
-  }, [allNodes, filter, setNodes]);
+  }, [allNodes, filter, options, setNodes]);
 
   const nodeTypes = useMemo(
     () => ({
@@ -70,6 +76,7 @@ export function App() {
     []
   );
 
+  // const simulation = forceSimulation();
   return (
     <ReactFlow
       nodes={nodes}
@@ -88,11 +95,12 @@ export function App() {
           render={render}
           compute={compute}
           setFilter={setFilter}
+          allNodes={allNodes}
         />
-        {allNodes && <DisplayPanel />}
+        {!!allNodes.length && <OptionsPanel />}
       </Panel>
       <Controls position='top-right' />
-      <MiniMap />
+      <MiniMap zoomable pannable />
       <Background />
     </ReactFlow>
   );
@@ -104,6 +112,7 @@ type InputPanelProps = {
   compute(): void;
   setFilter(v: string): void;
   render(): void;
+  allNodes: Node[];
 };
 function InputPanel({
   rawDB,
@@ -111,12 +120,13 @@ function InputPanel({
   compute,
   setFilter,
   render,
+  allNodes,
 }: InputPanelProps) {
   return (
     <Collapsible trigger='Input options' open>
       <div className='flex flex-col gap-2'>
-        <div>
-          <Upload title='Upload DB' onChange={setRawDB} id='upload-db' />
+        <Upload title='Upload DB' onChange={setRawDB} id='upload-db' />
+        <div className='flex justify-between gap-2'>
           <button
             className='rounded bg-white px-2 disabled:opacity-50'
             disabled={!rawDB}
@@ -124,13 +134,13 @@ function InputPanel({
           >
             Compute graph
           </button>
-        </div>
-        <div className='flex justify-between gap-2'>
-          Filter
-          <input onChange={(e) => setFilter(e.target.value)} />
+          <input
+            className='w-full'
+            onChange={(e) => setFilter(e.target.value)}
+          />
           <button
-            // disabled={!allNodes.length || !allEdges.length}
-            className='rounded bg-white px-2'
+            disabled={!allNodes.length}
+            className='rounded bg-white px-2 disabled:opacity-50'
             onClick={render}
           >
             Render graph
@@ -141,31 +151,59 @@ function InputPanel({
   );
 }
 
-function DisplayPanel() {
+function OptionsPanel() {
   const { options, setOptions } = useOptions();
+  const [filter, setFilter] = useState('');
+
   return (
     <Collapsible trigger='Display options'>
-      {Object.entries(options).map(([name, sub]) => (
-        <Collapsible key={name} trigger={name}>
-          {Object.entries(sub).map(([fieldName, enabled], idx) => (
-            <div key={idx} className='flex gap-2'>
-              <input
-                type='checkbox'
-                checked={enabled}
-                onChange={() =>
-                  setOptions((opts) => ({
-                    ...opts,
-                    [name]: {
-                      ...opts[name],
-                      [fieldName]: !opts[name][fieldName],
-                    },
-                  }))
-                }
-              />
-              {fieldName}
-            </div>
-          ))}
-        </Collapsible>
+      <input
+        className='w-full'
+        value={filter}
+        onChange={(e) => setFilter(e.target.value)}
+      />
+      {Object.entries(options).map(([bucket, sub]) => (
+        <div className='flex gap-2' key={bucket}>
+          <input
+            type='checkbox'
+            className='self-start mt-1'
+            checked={options[bucket].__internal__enabled}
+            onChange={() =>
+              setOptions((opts) => ({
+                ...opts,
+                [bucket]: {
+                  ...opts[bucket],
+                  __internal__enabled: !opts[bucket].__internal__enabled,
+                },
+              }))
+            }
+          />
+          <Collapsible trigger={bucket} open={filter !== ''}>
+            {Object.entries(sub).map(([fieldName, enabled], idx) => (
+              <>
+                {fieldName !== '__internal__enabled' &&
+                  fieldName.toLowerCase().includes(filter) && (
+                    <div key={idx} className='flex gap-2'>
+                      <input
+                        type='checkbox'
+                        checked={enabled}
+                        onChange={() =>
+                          setOptions((opts) => ({
+                            ...opts,
+                            [bucket]: {
+                              ...opts[bucket],
+                              [fieldName]: !opts[bucket][fieldName],
+                            },
+                          }))
+                        }
+                      />
+                      {fieldName}
+                    </div>
+                  )}
+              </>
+            ))}
+          </Collapsible>
+        </div>
       ))}
     </Collapsible>
   );
